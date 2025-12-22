@@ -52,6 +52,7 @@ private class DebouncerImpl(
     onBufferOverflow = BufferOverflow.DROP_OLDEST,
   )
 
+  @Volatile
   private var _debounceJob: Job? = null
 
   private val _isStartedFlow = MutableStateFlow(false)
@@ -66,7 +67,7 @@ private class DebouncerImpl(
     onStart: () -> Unit,
   ) {
     require(timeoutMillis > 0) { "timeoutMillis should > 0" }
-    if (_isStartedFlow.compareAndSet(expect = false, update = true)) {
+    if (_debounceJob == null && _isStartedFlow.compareAndSet(expect = false, update = true)) {
       try {
         coroutineScope {
           _debounceJob = coroutineContext.job
@@ -99,9 +100,9 @@ private class DebouncerImpl(
   private fun cleanup() {
     if (_isStartedFlow.compareAndSet(expect = true, update = false)) {
       _debounceJob?.cancel()
-      _debounceJob = null
       _debounceFlow.resetReplayCache()
       _isDebouncePendingFlow.value = false
+      _debounceJob = null
     }
   }
 }
