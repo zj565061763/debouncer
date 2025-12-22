@@ -44,11 +44,11 @@ private fun Content(
     horizontalAlignment = Alignment.CenterHorizontally,
   ) {
     if (isStarted) {
-      Button(onClick = { debouncer.cancel() }) {
-        Text(text = "cancel")
-      }
       Button(onClick = { debouncer.send() }) {
         Text(text = "send")
+      }
+      Button(onClick = { debouncer.cancel() }) {
+        Text(text = "cancel")
       }
     } else {
       Button(onClick = {
