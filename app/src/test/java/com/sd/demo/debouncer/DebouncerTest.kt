@@ -33,8 +33,10 @@ class DebouncerTest {
 
     launch { debouncer.start(1000) { events.add("onStart") } }
     launch { debouncer.start(1000) { events.add("onStart") } }
+    launch { debouncer.start(1000) { events.add("onStart") } }
     advanceUntilIdle()
 
+    debouncer.send()
     debouncer.send()
     debouncer.send()
     advanceTimeBy(1001)
