@@ -54,4 +54,26 @@ class DebouncerTest {
     advanceUntilIdle()
     assertEquals(listOf("onStart", "onBlock"), events)
   }
+
+  @Test
+  fun `test send in onStart block`() = runTest {
+    val events = mutableListOf<String>()
+
+    var debounceJob: Job? = null
+
+    val debouncer = Debouncer {
+      events.add("onBlock")
+      debounceJob?.cancel()
+    }
+
+    debounceJob = launch {
+      debouncer.start(1000) {
+        events.add("onStart")
+        debouncer.send()
+      }
+    }
+    advanceUntilIdle()
+
+    assertEquals(listOf("onStart", "onBlock"), events)
+  }
 }
