@@ -1,5 +1,6 @@
 package com.sd.demo.debouncer
 
+import app.cash.turbine.test
 import com.sd.lib.debouncer.Debouncer
 import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -101,5 +102,21 @@ class DebouncerTest {
     debouncer.send()
     advanceTimeBy(1001)
     assertEquals(listOf("onStart", "onBlock"), events)
+  }
+
+  @Test
+  fun `test isStarted`() = runTest {
+    val debouncer = Debouncer { }
+    debouncer.isStarted.test {
+      assertEquals(false, awaitItem())
+
+      launch { debouncer.start(1000) }
+      advanceUntilIdle()
+      assertEquals(true, awaitItem())
+
+      debouncer.cancel()
+      advanceUntilIdle()
+      assertEquals(false, awaitItem())
+    }
   }
 }
