@@ -36,8 +36,11 @@ class DebouncerTest {
     launch { debouncer.start(1000) { events.add("onStart") } }
     advanceUntilIdle()
 
+    debouncer.send()
+    advanceTimeBy(1001)
     debouncer.cancel()
-    assertEquals(listOf("onStart"), events)
+
+    assertEquals(listOf("onStart", "onBlock"), events)
   }
 
   @Test
