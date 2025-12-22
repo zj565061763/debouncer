@@ -119,4 +119,31 @@ class DebouncerTest {
       assertEquals(false, awaitItem())
     }
   }
+
+  @Test
+  fun `test isDebouncePending`() = runTest {
+    val debouncer = Debouncer { }
+    debouncer.isDebouncePending.test {
+      assertEquals(false, awaitItem())
+
+      launch { debouncer.start(1000) }
+      advanceUntilIdle()
+
+      debouncer.send()
+      advanceUntilIdle()
+      assertEquals(true, awaitItem())
+      advanceTimeBy(1001)
+      assertEquals(false, awaitItem())
+
+      debouncer.send()
+      debouncer.send()
+      debouncer.send()
+      advanceUntilIdle()
+      assertEquals(true, awaitItem())
+      advanceTimeBy(1001)
+      assertEquals(false, awaitItem())
+
+      debouncer.cancel()
+    }
+  }
 }
