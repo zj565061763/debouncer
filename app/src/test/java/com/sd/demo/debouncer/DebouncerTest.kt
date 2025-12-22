@@ -4,6 +4,8 @@ import app.cash.turbine.test
 import com.sd.lib.debouncer.Debouncer
 import junit.framework.TestCase.assertEquals
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -102,6 +104,25 @@ class DebouncerTest {
     debouncer.send()
     advanceTimeBy(1001)
     assertEquals(listOf("onStart", "onBlock"), events)
+  }
+
+  @Test
+  fun `test launch in onStart block`() = runTest {
+    val debouncer = Debouncer { }
+
+    var job: Job? = null
+
+    launch {
+      debouncer.start(1000) {
+        job = launch { delay(Long.MAX_VALUE) }
+      }
+    }
+
+    advanceUntilIdle()
+    assertEquals(true, job?.isActive)
+
+    debouncer.cancel()
+    assertEquals(true, job?.isCancelled)
   }
 
   @Test
