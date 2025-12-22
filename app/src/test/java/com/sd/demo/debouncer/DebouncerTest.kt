@@ -30,4 +30,28 @@ class DebouncerTest {
     advanceUntilIdle()
     assertEquals(listOf("onStart", "onBlock"), events)
   }
+
+  @Test
+  fun `test success multi`() = runTest {
+    val events = mutableListOf<String>()
+
+    var debounceJob1: Job? = null
+    var debounceJob2: Job? = null
+
+    val debouncer = Debouncer {
+      events.add("onBlock")
+      debounceJob1?.cancel()
+      debounceJob2?.cancel()
+    }
+
+    debounceJob1 = launch { debouncer.start(1000) { events.add("onStart") } }
+    debounceJob2 = launch { debouncer.start(1000) { events.add("onStart") } }
+    advanceUntilIdle()
+
+    debouncer.send()
+    debouncer.send()
+
+    advanceUntilIdle()
+    assertEquals(listOf("onStart", "onBlock"), events)
+  }
 }
