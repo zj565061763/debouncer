@@ -21,9 +21,9 @@ class DebouncerTest {
 
     debouncer.send()
     advanceTimeBy(1001)
-    debouncer.cancel()
-
     assertEquals(listOf("onStart", "onBlock"), events)
+
+    debouncer.cancel()
   }
 
   @Test
@@ -38,9 +38,32 @@ class DebouncerTest {
 
     debouncer.send()
     advanceTimeBy(1001)
-    debouncer.cancel()
-
     assertEquals(listOf("onStart", "onBlock"), events)
+
+    debouncer.cancel()
+  }
+
+  @Test
+  fun `test send multi times`() = runTest {
+    val events = mutableListOf<String>()
+    val debouncer = Debouncer { events.add("onBlock") }
+
+    launch { debouncer.start(1000) { events.add("onStart") } }
+    advanceUntilIdle()
+
+    debouncer.send()
+    debouncer.send()
+    debouncer.send()
+    advanceTimeBy(1001)
+    assertEquals(listOf("onStart", "onBlock"), events)
+
+    debouncer.send()
+    advanceTimeBy(1001)
+    debouncer.send()
+    advanceTimeBy(1001)
+    assertEquals(listOf("onStart", "onBlock", "onBlock", "onBlock"), events)
+
+    debouncer.cancel()
   }
 
   @Test
@@ -57,9 +80,9 @@ class DebouncerTest {
 
     advanceUntilIdle()
     advanceTimeBy(1001)
-    debouncer.cancel()
-
     assertEquals(listOf("onStart", "onBlock"), events)
+
+    debouncer.cancel()
   }
 
   @Test
@@ -72,11 +95,11 @@ class DebouncerTest {
 
     debouncer.send()
     advanceTimeBy(1001)
+    assertEquals(listOf("onStart", "onBlock"), events)
 
     debouncer.cancel()
     debouncer.send()
-
-    advanceUntilIdle()
+    advanceTimeBy(1001)
     assertEquals(listOf("onStart", "onBlock"), events)
   }
 }
