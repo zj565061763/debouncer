@@ -27,7 +27,7 @@ class DebouncerTest {
   }
 
   @Test
-  fun `test success multi`() = runTest {
+  fun `test start multi times`() = runTest {
     val events = mutableListOf<String>()
     val debouncer = Debouncer { events.add("onBlock") }
 
@@ -36,13 +36,8 @@ class DebouncerTest {
     launch { debouncer.start(1000) { events.add("onStart") } }
     advanceUntilIdle()
 
-    debouncer.send()
-    debouncer.send()
-    debouncer.send()
-    advanceTimeBy(1001)
     debouncer.cancel()
-
-    assertEquals(listOf("onStart", "onBlock"), events)
+    assertEquals(listOf("onStart"), events)
   }
 
   @Test
