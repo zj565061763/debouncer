@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onSubscription
@@ -43,6 +44,11 @@ interface Debouncer {
 
 fun Debouncer(onBlock: () -> Unit): Debouncer {
   return DebouncerImpl(onBlock)
+}
+
+/** 等待Debounce结束，如果当前有事件触发Debounce等待中，则挂起 */
+suspend fun Debouncer.awaitNotPending() {
+  isDebouncePendingFlow.first { !it }
 }
 
 private class DebouncerImpl(
