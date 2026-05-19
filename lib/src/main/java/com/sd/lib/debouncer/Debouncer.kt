@@ -1,6 +1,7 @@
 package com.sd.lib.debouncer
 
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.coroutineScope
@@ -9,7 +10,7 @@ import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.mapLatest
 import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onSubscription
 import kotlinx.coroutines.job
@@ -59,6 +60,7 @@ private class DebouncerImpl(
   override val isStartedFlow: StateFlow<Boolean> = _isStartedFlow.asStateFlow()
   override val isDebouncePendingFlow: StateFlow<Boolean> = _isDebouncePendingFlow.asStateFlow()
 
+  @OptIn(ExperimentalCoroutinesApi::class)
   override suspend fun start(
     timeoutMillis: Long,
     onStart: CoroutineScope.() -> Unit,
@@ -78,10 +80,12 @@ private class DebouncerImpl(
               _isDebouncePendingFlow.value = false
             }
           }
-          .collectLatest {
+          .mapLatest {
             _isDebouncePendingFlow.value = true
             delay(timeoutMillis)
             _isDebouncePendingFlow.value = false
+          }
+          .collect {
             onBlock()
           }
       }
