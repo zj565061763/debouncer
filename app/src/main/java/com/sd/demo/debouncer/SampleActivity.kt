@@ -35,8 +35,8 @@ private fun Content(
   modifier: Modifier = Modifier,
 ) {
   val debouncer = remember { Debouncer { logMsg { "onBlock" } } }
-  val isStarted by debouncer.isStarted.collectAsStateWithLifecycle()
-  val isPendingDebounce by debouncer.isDebouncePending.collectAsStateWithLifecycle()
+  val isStarted by debouncer.isStartedFlow.collectAsStateWithLifecycle()
+  val isPendingDebounce by debouncer.isDebouncePendingFlow.collectAsStateWithLifecycle()
   val coroutineScope = rememberCoroutineScope()
 
   Column(

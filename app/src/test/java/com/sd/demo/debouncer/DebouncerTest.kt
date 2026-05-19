@@ -128,7 +128,7 @@ class DebouncerTest {
   @Test
   fun `test isStarted`() = runTest {
     val debouncer = Debouncer { }
-    debouncer.isStarted.test {
+    debouncer.isStartedFlow.test {
       assertEquals(false, awaitItem())
 
       launch { debouncer.start(1000) }
@@ -144,7 +144,7 @@ class DebouncerTest {
   @Test
   fun `test isDebouncePending`() = runTest {
     val debouncer = Debouncer { }
-    debouncer.isDebouncePending.test {
+    debouncer.isDebouncePendingFlow.test {
       assertEquals(false, awaitItem())
 
       launch { debouncer.start(1000) }
