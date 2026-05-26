@@ -10,13 +10,16 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.sd.demo.debouncer.theme.AppTheme
 import com.sd.lib.debouncer.Debouncer
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
 class SampleActivity : ComponentActivity() {
@@ -37,7 +40,9 @@ private fun Content(
   val debouncer = remember { Debouncer { logMsg { "onBlock" } } }
   val isStarted by debouncer.isStartedFlow.collectAsStateWithLifecycle()
   val isPendingDebounce by debouncer.isDebouncePendingFlow.collectAsStateWithLifecycle()
+
   val coroutineScope = rememberCoroutineScope()
+  var job by remember { mutableStateOf<Job?>(null) }
 
   Column(
     modifier = modifier.fillMaxSize(),
@@ -47,12 +52,12 @@ private fun Content(
       Button(onClick = { debouncer.send() }) {
         Text(text = "send")
       }
-      Button(onClick = { debouncer.cancel() }) {
+      Button(onClick = { job?.cancel() }) {
         Text(text = "cancel")
       }
     } else {
       Button(onClick = {
-        coroutineScope.launch {
+        job = coroutineScope.launch {
           debouncer.start(2000) {
             logMsg { "onStart" }
             debouncer.send()
