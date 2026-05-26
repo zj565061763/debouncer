@@ -19,12 +19,13 @@ class DebouncerTest {
     val events = mutableListOf<String>()
     val debouncer = Debouncer { events.add("onBlock") }
 
-    launch { debouncer.start(1000) { events.add("onStart") } }
+    val job = launch { debouncer.start(1000) { events.add("onStart") } }
     advanceUntilIdle()
 
     debouncer.send()
     advanceTimeBy(1001)
     assertEquals(listOf("onStart", "onBlock"), events)
+    job.cancel()
   }
 
   @Test
@@ -34,12 +35,13 @@ class DebouncerTest {
 
     launch { debouncer.start(1000) { events.add("onStart") } }
     launch { debouncer.start(1000) { events.add("onStart") } }
-    launch { debouncer.start(1000) { events.add("onStart") } }
+    val lastJob = launch { debouncer.start(1000) { events.add("onStart") } }
     advanceUntilIdle()
 
     debouncer.send()
     advanceTimeBy(1001)
     assertEquals(listOf("onStart", "onStart", "onStart", "onBlock"), events)
+    lastJob.cancel()
   }
 
   @Test
@@ -47,7 +49,7 @@ class DebouncerTest {
     val events = mutableListOf<String>()
     val debouncer = Debouncer { events.add("onBlock") }
 
-    launch { debouncer.start(1000) { events.add("onStart") } }
+    val job = launch { debouncer.start(1000) { events.add("onStart") } }
     advanceUntilIdle()
 
     debouncer.send()
@@ -61,6 +63,7 @@ class DebouncerTest {
     debouncer.send()
     advanceTimeBy(1001)
     assertEquals(listOf("onStart", "onBlock", "onBlock", "onBlock"), events)
+    job.cancel()
   }
 
   @Test
@@ -68,7 +71,7 @@ class DebouncerTest {
     val events = mutableListOf<String>()
     val debouncer = Debouncer { events.add("onBlock") }
 
-    launch {
+    val job = launch {
       debouncer.start(1000) {
         events.add("onStart")
         debouncer.send()
@@ -78,6 +81,7 @@ class DebouncerTest {
     advanceUntilIdle()
     advanceTimeBy(1001)
     assertEquals(listOf("onStart", "onBlock"), events)
+    job.cancel()
   }
 
   @Test
@@ -122,7 +126,7 @@ class DebouncerTest {
     debouncer.isDebouncePendingFlow.test {
       assertEquals(false, awaitItem())
 
-      launch { debouncer.start(1000) }
+      val job = launch { debouncer.start(1000) }
       advanceUntilIdle()
 
       debouncer.send()
@@ -138,6 +142,7 @@ class DebouncerTest {
       assertEquals(true, awaitItem())
       advanceTimeBy(1001)
       assertEquals(false, awaitItem())
+      job.cancel()
     }
   }
 }
