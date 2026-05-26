@@ -107,6 +107,28 @@ class DebouncerTest {
   }
 
   @Test
+  fun `test cancelAndJoin`() = runTest {
+    val events = mutableListOf<String>()
+    val debouncer = Debouncer { events.add("onBlock") }
+
+    launch { debouncer.start(1000) { events.add("onStart") } }
+    advanceUntilIdle()
+    assertEquals(true, debouncer.isStartedFlow.value)
+
+    debouncer.send()
+    advanceTimeBy(500)
+    assertEquals(true, debouncer.isDebouncePendingFlow.value)
+
+    debouncer.cancelAndJoin()
+
+    assertEquals(false, debouncer.isStartedFlow.value)
+    assertEquals(false, debouncer.isDebouncePendingFlow.value)
+
+    advanceTimeBy(1000)
+    assertEquals(listOf("onStart"), events)
+  }
+
+  @Test
   fun `test launch in onStart block`() = runTest {
     val debouncer = Debouncer { }
 
