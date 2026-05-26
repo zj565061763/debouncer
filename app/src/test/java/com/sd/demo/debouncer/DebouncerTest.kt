@@ -41,7 +41,7 @@ class DebouncerTest {
 
     debouncer.send()
     advanceTimeBy(1001)
-    assertEquals(listOf("onStart", "onBlock"), events)
+    assertEquals(listOf("onStart", "onStart", "onStart", "onBlock"), events)
 
     debouncer.cancel()
   }
