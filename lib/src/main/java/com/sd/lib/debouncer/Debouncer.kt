@@ -35,12 +35,6 @@ interface Debouncer {
 
   /** 发送事件 */
   fun send()
-
-  /** 取消收集事件 */
-  fun cancel()
-
-  /** 取消收集事件，并等待取消完成 */
-  suspend fun cancelAndJoin()
 }
 
 fun Debouncer(onBlock: () -> Unit): Debouncer {
@@ -111,17 +105,6 @@ private class DebouncerImpl(
 
   override fun send() {
     _debounceFlow.tryEmit(Unit)
-  }
-
-  override fun cancel() {
-    _job?.cancel()
-  }
-
-  override suspend fun cancelAndJoin() {
-    _jobMutex.withLock {
-      _job?.cancelAndJoin()
-      _job = null
-    }
   }
 }
 

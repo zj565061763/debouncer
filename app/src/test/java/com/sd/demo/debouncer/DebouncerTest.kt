@@ -25,8 +25,6 @@ class DebouncerTest {
     debouncer.send()
     advanceTimeBy(1001)
     assertEquals(listOf("onStart", "onBlock"), events)
-
-    debouncer.cancel()
   }
 
   @Test
@@ -42,8 +40,6 @@ class DebouncerTest {
     debouncer.send()
     advanceTimeBy(1001)
     assertEquals(listOf("onStart", "onStart", "onStart", "onBlock"), events)
-
-    debouncer.cancel()
   }
 
   @Test
@@ -65,8 +61,6 @@ class DebouncerTest {
     debouncer.send()
     advanceTimeBy(1001)
     assertEquals(listOf("onStart", "onBlock", "onBlock", "onBlock"), events)
-
-    debouncer.cancel()
   }
 
   @Test
@@ -84,48 +78,6 @@ class DebouncerTest {
     advanceUntilIdle()
     advanceTimeBy(1001)
     assertEquals(listOf("onStart", "onBlock"), events)
-
-    debouncer.cancel()
-  }
-
-  @Test
-  fun `test cancel`() = runTest {
-    val events = mutableListOf<String>()
-    val debouncer = Debouncer { events.add("onBlock") }
-
-    launch { debouncer.start(1000) { events.add("onStart") } }
-    advanceUntilIdle()
-
-    debouncer.send()
-    advanceTimeBy(1001)
-    assertEquals(listOf("onStart", "onBlock"), events)
-
-    debouncer.cancel()
-    debouncer.send()
-    advanceTimeBy(1001)
-    assertEquals(listOf("onStart", "onBlock"), events)
-  }
-
-  @Test
-  fun `test cancelAndJoin`() = runTest {
-    val events = mutableListOf<String>()
-    val debouncer = Debouncer { events.add("onBlock") }
-
-    launch { debouncer.start(1000) { events.add("onStart") } }
-    advanceUntilIdle()
-    assertEquals(true, debouncer.isStartedFlow.value)
-
-    debouncer.send()
-    advanceTimeBy(500)
-    assertEquals(true, debouncer.isDebouncePendingFlow.value)
-
-    debouncer.cancelAndJoin()
-
-    assertEquals(false, debouncer.isStartedFlow.value)
-    assertEquals(false, debouncer.isDebouncePendingFlow.value)
-
-    advanceTimeBy(1000)
-    assertEquals(listOf("onStart"), events)
   }
 
   @Test
@@ -134,7 +86,7 @@ class DebouncerTest {
 
     var job: Job? = null
 
-    launch {
+    val startJob = launch {
       debouncer.start(1000) {
         job = launch { delay(Long.MAX_VALUE) }
       }
@@ -143,7 +95,8 @@ class DebouncerTest {
     advanceUntilIdle()
     assertEquals(true, job?.isActive)
 
-    debouncer.cancel()
+    startJob.cancel()
+    advanceUntilIdle()
     assertEquals(true, job?.isCancelled)
   }
 
@@ -153,11 +106,11 @@ class DebouncerTest {
     debouncer.isStartedFlow.test {
       assertEquals(false, awaitItem())
 
-      launch { debouncer.start(1000) }
+      val job = launch { debouncer.start(1000) }
       advanceUntilIdle()
       assertEquals(true, awaitItem())
 
-      debouncer.cancel()
+      job.cancel()
       advanceUntilIdle()
       assertEquals(false, awaitItem())
     }
@@ -185,8 +138,6 @@ class DebouncerTest {
       assertEquals(true, awaitItem())
       advanceTimeBy(1001)
       assertEquals(false, awaitItem())
-
-      debouncer.cancel()
     }
   }
 }
