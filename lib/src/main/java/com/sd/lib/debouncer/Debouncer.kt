@@ -50,8 +50,6 @@ private class DebouncerImpl(
   private val onBlock: () -> Unit,
 ) : Debouncer {
   private val _jobMutex = Mutex()
-
-  @Volatile
   private var _job: Job? = null
 
   private val _debounceFlow = MutableSharedFlow<Unit>(
