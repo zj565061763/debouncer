@@ -3,6 +3,7 @@ package com.sd.lib.debouncer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.BufferOverflow
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
@@ -12,10 +13,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.mapLatest
-import kotlinx.coroutines.flow.onCompletion
 import kotlinx.coroutines.flow.onSubscription
 import kotlinx.coroutines.job
-import kotlin.coroutines.cancellation.CancellationException
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 interface Debouncer {
   /** 是否已经开始收集 */
@@ -24,10 +25,7 @@ interface Debouncer {
   /** 是否有事件触发Debounce等待中 */
   val isDebouncePendingFlow: StateFlow<Boolean>
 
-  /**
-   * 开始收集事件，如果本次调用触发开始，则在调用处挂起，否则方法直接返回，
-   * 如果挂起后，调用了[cancel]，则调用处会抛异常[CancellationException]
-   */
+  /** 开始挂起收集事件，多次调用会取消上一次的调用。 */
   suspend fun start(
     /** debounce时长必须大于0，否则抛异常[IllegalArgumentException] */
     timeoutMillis: Long,
@@ -40,6 +38,9 @@ interface Debouncer {
 
   /** 取消收集事件 */
   fun cancel()
+
+  /** 取消收集事件，并等待取消完成 */
+  suspend fun cancelAndJoin()
 }
 
 fun Debouncer(onBlock: () -> Unit): Debouncer {
@@ -54,7 +55,11 @@ suspend fun Debouncer.awaitNotPending() {
 private class DebouncerImpl(
   private val onBlock: () -> Unit,
 ) : Debouncer {
-  private val _debounceJob = MutableStateFlow<Job?>(null)
+  private val _jobMutex = Mutex()
+
+  @Volatile
+  private var _job: Job? = null
+
   private val _debounceFlow = MutableSharedFlow<Unit>(
     extraBufferCapacity = 1,
     onBufferOverflow = BufferOverflow.DROP_OLDEST,
@@ -74,17 +79,20 @@ private class DebouncerImpl(
     require(timeoutMillis > 0) { "timeoutMillis should > 0" }
     coroutineScope {
       val debounceJob = coroutineContext.job
-      if (_debounceJob.compareAndSet(null, debounceJob)) {
+
+      _jobMutex.withLock {
+        _job?.cancelAndJoin()
+        _job = debounceJob
+        debounceJob.invokeOnCompletion {
+          _jobMutex.extTryLock { if (_job === debounceJob) _job = null }
+        }
+      }
+
+      try {
         _debounceFlow
           .onSubscription {
             _isStartedFlow.value = true
             onStart()
-          }
-          .onCompletion {
-            if (_debounceJob.compareAndSet(debounceJob, null)) {
-              _isStartedFlow.value = false
-              _isDebouncePendingFlow.value = false
-            }
           }
           .mapLatest {
             _isDebouncePendingFlow.value = true
@@ -94,6 +102,9 @@ private class DebouncerImpl(
           .collect {
             onBlock()
           }
+      } finally {
+        _isDebouncePendingFlow.value = false
+        _isStartedFlow.value = false
       }
     }
   }
@@ -103,6 +114,23 @@ private class DebouncerImpl(
   }
 
   override fun cancel() {
-    _debounceJob.value?.cancel()
+    _job?.cancel()
+  }
+
+  override suspend fun cancelAndJoin() {
+    _jobMutex.withLock {
+      _job?.cancelAndJoin()
+      _job = null
+    }
+  }
+}
+
+private inline fun Mutex.extTryLock(block: () -> Unit) {
+  if (tryLock()) {
+    try {
+      block()
+    } finally {
+      unlock()
+    }
   }
 }
